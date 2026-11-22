@@ -1,5 +1,6 @@
 
-// ULTIMATE HUB - GIVEAWAYS UPDATE
+// ULTIMATE HUB - COMPLETE WEBSITE SCRIPT
+// Dashboard + Authentication + Giveaways + Hierarchy
 
 const SUPABASE_URL = "https://nvcsyigvsivtjbyjsbfb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_ZQQLO6j1kgf-ZoEZUtqahg_gWI4O4C4";
@@ -37,9 +38,15 @@ function escapeHTML(value) {
   })[char]);
 }
 
+function inputStyle() {
+  return "display:block;width:100%;padding:12px;margin:8px 0 16px;background:#191927;color:white;border:1px solid #33334a;border-radius:8px;box-sizing:border-box";
+}
+
 function isAdmin() {
   return currentProfile?.role === "Admin";
 }
+
+// AUTHENTICATION
 
 function showAuth(message = "") {
   app.innerHTML = `
@@ -56,19 +63,28 @@ function showAuth(message = "") {
         <form id="auth-form">
           <label>Email</label>
           <input id="email" type="email" required placeholder="Your email"
-            style="width:100%;padding:13px;margin:8px 0 18px;background:#191927;color:white;border:1px solid #33334a;border-radius:8px">
+            style="${inputStyle()}">
+
           <label>Password</label>
           <input id="password" type="password" required minlength="6"
-            placeholder="Your password"
-            style="width:100%;padding:13px;margin:8px 0 18px;background:#191927;color:white;border:1px solid #33334a;border-radius:8px">
-          <input id="username" type="text" maxlength="20" placeholder="Choose a username"
-            style="display:none;width:100%;padding:13px;margin-bottom:18px;background:#191927;color:white;border:1px solid #33334a;border-radius:8px">
-          <button class="primary-btn" id="auth-submit" type="submit" style="width:100%">Login</button>
+            placeholder="Your password" style="${inputStyle()}">
+
+          <input id="username" type="text" maxlength="20"
+            placeholder="Choose a username"
+            style="display:none;${inputStyle()}">
+
+          <button class="primary-btn" id="auth-submit" type="submit"
+            style="width:100%">Login</button>
         </form>
-        <p id="auth-message" style="margin-top:15px;color:#ff9999">${escapeHTML(message)}</p>
+
+        <p id="auth-message" style="margin-top:15px;color:#ff9999">
+          ${escapeHTML(message)}
+        </p>
+
         <p style="margin-top:20px;text-align:center;font-size:13px">
           <span id="toggle-text">Don't have an account?</span>
-          <button id="toggle-auth" type="button" style="background:none;color:#a78bfa;font-weight:bold">Register</button>
+          <button id="toggle-auth" type="button"
+            style="background:none;color:#a78bfa;font-weight:bold">Register</button>
         </p>
       </div>
     </div>
@@ -80,16 +96,22 @@ function showAuth(message = "") {
 
   document.getElementById("toggle-auth").onclick = () => {
     isRegister = !isRegister;
+
     document.getElementById("auth-title").textContent =
       isRegister ? "Create Account" : "Welcome Back!";
+
     document.getElementById("auth-description").textContent =
       isRegister ? "Join the Ultimate Hub community." : "Login to your account.";
+
     document.getElementById("auth-submit").textContent =
       isRegister ? "Create Account" : "Login";
+
     document.getElementById("toggle-text").textContent =
       isRegister ? "Already have an account?" : "Don't have an account?";
+
     document.getElementById("toggle-auth").textContent =
       isRegister ? "Login" : "Register";
+
     usernameInput.style.display = isRegister ? "block" : "none";
     usernameInput.required = isRegister;
   };
@@ -104,7 +126,8 @@ function showAuth(message = "") {
     const submit = document.getElementById("auth-submit");
 
     if (isRegister && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      messageBox.textContent = "Username must be 3-20 characters using letters, numbers or underscores.";
+      messageBox.textContent =
+        "Username must be 3-20 characters using letters, numbers or underscores.";
       return;
     }
 
@@ -120,10 +143,12 @@ function showAuth(message = "") {
             data: { username }
           }
         });
+
         if (error) throw error;
 
         messageBox.textContent =
           "Account created! Check your email to confirm, then log in.";
+
         submit.disabled = false;
         submit.textContent = "Create Account";
       } else {
@@ -131,7 +156,9 @@ function showAuth(message = "") {
           email,
           password
         });
+
         if (error) throw error;
+
         await loadDashboard();
       }
     } catch (error) {
@@ -141,6 +168,8 @@ function showAuth(message = "") {
     }
   };
 }
+
+// DASHBOARD
 
 async function loadDashboard() {
   app.innerHTML = `
@@ -152,6 +181,7 @@ async function loadDashboard() {
 
   try {
     const { data, error } = await supabaseClient.auth.getUser();
+
     if (error || !data.user) {
       currentUser = null;
       currentProfile = null;
@@ -172,12 +202,16 @@ async function loadDashboard() {
 
     currentProfile = profile;
     currentPage = "Dashboard";
+
     render();
+
   } catch (error) {
     app.innerHTML = `
       <div class="card" style="margin:30px;padding:25px">
         <h2>Profile Loading Error</h2>
-        <p style="color:#ff7777;margin:15px 0">${escapeHTML(error.message)}</p>
+        <p style="color:#ff7777;margin:15px 0">
+          ${escapeHTML(error.message)}
+        </p>
         <button class="secondary-btn" onclick="logout()">Logout</button>
       </div>
     `;
@@ -191,7 +225,7 @@ function render() {
   }
 
   const name = escapeHTML(currentProfile.username);
-  const coins = Number(currentProfile.coins).toLocaleString();
+  const coins = Number(currentProfile.coins || 0).toLocaleString();
 
   app.innerHTML = `
     <header class="topbar">
@@ -205,9 +239,12 @@ function render() {
     <div class="layout">
       <aside class="sidebar">
         <h3>MENU</h3>
+
         ${pages.map(([page, icon]) => `
           <button class="nav-item ${currentPage === page ? "active" : ""}"
-            onclick="showPage('${page}')">${icon} ${page}</button>
+            onclick="showPage('${page}')">
+            ${icon} ${page}
+          </button>
         `).join("")}
       </aside>
 
@@ -223,17 +260,22 @@ function render() {
             <span>👤 Member</span>
             <h2 style="font-size:20px">${name}</h2>
           </div>
+
           <div class="card">
             <span>🪙 Your Coins</span>
             <h2>${coins}</h2>
           </div>
+
           <div class="card">
             <span>⭐ Your Level</span>
             <h2>${escapeHTML(currentProfile.level)}</h2>
           </div>
+
           <div class="card">
             <span>👑 Your Rank</span>
-            <h2 style="font-size:20px">${escapeHTML(currentProfile.role)}</h2>
+            <h2 style="font-size:20px">
+              ${escapeHTML(currentProfile.role)}
+            </h2>
           </div>
         </div>
 
@@ -281,6 +323,11 @@ async function loadPageContent() {
     return;
   }
 
+  if (currentPage === "Hierarchy") {
+    await loadHierarchy();
+    return;
+  }
+
   if (currentPage === "Dashboard") {
     container.innerHTML = `
       <h3>Welcome back, ${escapeHTML(currentProfile.username)}!</h3>
@@ -288,7 +335,9 @@ async function loadPageContent() {
         Explore the menu to discover everything Ultimate Hub has to offer.
       </p>
       <button class="primary-btn" style="margin-top:20px"
-        onclick="showPage('Giveaways')">Explore Giveaways 🎁</button>
+        onclick="showPage('Giveaways')">
+        Explore Giveaways 🎁
+      </button>
     `;
     return;
   }
@@ -325,6 +374,7 @@ async function loadGiveaways() {
       html += `
         <div class="card" style="padding:20px;margin-bottom:25px">
           <h3>➕ Create a Giveaway</h3>
+
           <form id="create-giveaway-form" style="margin-top:15px">
             <label>Giveaway title</label>
             <input id="giveaway-title" required maxlength="100"
@@ -346,8 +396,11 @@ async function loadGiveaways() {
               style="${inputStyle()}">
 
             <button class="primary-btn" type="submit"
-              style="width:100%;margin-top:15px">Create Giveaway</button>
+              style="width:100%;margin-top:15px">
+              Create Giveaway
+            </button>
           </form>
+
           <p id="create-message" style="margin-top:12px"></p>
         </div>
       `;
@@ -359,17 +412,20 @@ async function loadGiveaways() {
       html += `
         <div class="card" style="padding:25px;text-align:center">
           <h3>No giveaways yet!</h3>
-          <p class="muted" style="margin-top:10px">Check back soon for exciting prizes.</p>
+          <p class="muted" style="margin-top:10px">
+            Check back soon for exciting prizes.
+          </p>
         </div>
       `;
     } else {
       for (const giveaway of giveaways) {
-        const { data: myEntry, error: entryError } = await supabaseClient
-          .from("giveaway_entries")
-          .select("id")
-          .eq("giveaway_id", giveaway.id)
-          .eq("user_id", currentUser.id)
-          .maybeSingle();
+        const { data: myEntry, error: entryError } =
+          await supabaseClient
+            .from("giveaway_entries")
+            .select("id")
+            .eq("giveaway_id", giveaway.id)
+            .eq("user_id", currentUser.id)
+            .maybeSingle();
 
         if (entryError) throw entryError;
 
@@ -380,6 +436,7 @@ async function loadGiveaways() {
         const entered = Boolean(myEntry);
 
         let statusText = "OPEN";
+
         if (giveaway.status === "completed") statusText = "COMPLETED";
         else if (giveaway.status === "closed" || endedByTime) statusText = "CLOSED";
 
@@ -387,12 +444,14 @@ async function loadGiveaways() {
           <div class="card" style="padding:20px;margin-bottom:15px">
             <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
               <h3>${escapeHTML(giveaway.title)}</h3>
-              <span style="color:${isOpen ? "#4ade80" : "#fbbf24"};font-weight:bold">
+              <strong style="color:${isOpen ? "#4ade80" : "#fbbf24"}">
                 ${statusText}
-              </span>
+              </strong>
             </div>
 
-            <p style="margin-top:12px">🏆 Prize: <strong>${escapeHTML(giveaway.prize)}</strong></p>
+            <p style="margin-top:12px">
+              🏆 Prize: <strong>${escapeHTML(giveaway.prize)}</strong>
+            </p>
 
             <p class="muted" style="margin-top:10px">
               ${escapeHTML(giveaway.description || "No description provided.")}
@@ -418,16 +477,21 @@ async function loadGiveaways() {
               </button>
             ` : `
               <p class="muted" style="margin-top:15px">
-                ${giveaway.status === "completed" ? "This giveaway has ended." : "Entries are closed."}
+                Entries are closed.
               </p>
             `}
 
             ${isAdmin() && giveaway.status === "open" ? `
               <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px">
                 <button class="secondary-btn"
-                  onclick="closeGiveaway('${giveaway.id}')">Close</button>
+                  onclick="closeGiveaway('${giveaway.id}')">
+                  Close
+                </button>
+
                 <button class="primary-btn"
-                  onclick="drawWinner('${giveaway.id}')">Pick Winner 👑</button>
+                  onclick="drawWinner('${giveaway.id}')">
+                  Pick Winner 👑
+                </button>
               </div>
             ` : ""}
           </div>
@@ -438,6 +502,7 @@ async function loadGiveaways() {
     container.innerHTML = html;
 
     const createForm = document.getElementById("create-giveaway-form");
+
     if (createForm) {
       createForm.onsubmit = createGiveaway;
     }
@@ -450,10 +515,6 @@ async function loadGiveaways() {
       </div>
     `;
   }
-}
-
-function inputStyle() {
-  return "display:block;width:100%;padding:12px;margin:8px 0 16px;background:#191927;color:white;border:1px solid #33334a;border-radius:8px;box-sizing:border-box";
 }
 
 async function createGiveaway(event) {
@@ -526,6 +587,7 @@ async function enterGiveaway(id) {
 
 async function closeGiveaway(id) {
   if (!isAdmin()) return;
+
   if (!confirm("Are you sure you want to close this giveaway?")) return;
 
   try {
@@ -546,6 +608,7 @@ async function closeGiveaway(id) {
 
 async function drawWinner(id) {
   if (!isAdmin()) return;
+
   if (!confirm("Pick a random winner from the entries?")) return;
 
   try {
@@ -581,7 +644,136 @@ async function drawWinner(id) {
   }
 }
 
-// AUTH AND NAVIGATION
+// HIERARCHY
+
+async function loadHierarchy() {
+  const container = document.getElementById("page-content");
+  if (!container) return;
+
+  container.innerHTML = "<p>Loading members...</p>";
+
+  try {
+    const { data: members, error } = await supabaseClient
+      .from("profiles")
+      .select("id, username, role, level, coins")
+      .order("username", { ascending: true });
+
+    if (error) throw error;
+
+    const rankColors = {
+      Owner: "#fbbf24",
+      Admin: "#a78bfa",
+      Moderator: "#60a5fa",
+      VIP: "#4ade80",
+      Member: "#cbd5e1"
+    };
+
+    let html = `
+      <h3>👑 Community Hierarchy</h3>
+      <p class="muted" style="margin:10px 0 20px">
+        View members, ranks, levels, and community positions.
+      </p>
+
+      <div class="card" style="padding:18px;margin-bottom:20px">
+        <h3>Rank Guide</h3>
+        <p style="margin-top:12px;color:#fbbf24">👑 Owner</p>
+        <p style="margin-top:8px;color:#a78bfa">🛡️ Admin</p>
+        <p style="margin-top:8px;color:#60a5fa">🔨 Moderator</p>
+        <p style="margin-top:8px;color:#4ade80">⭐ VIP</p>
+        <p style="margin-top:8px;color:#cbd5e1">👤 Member</p>
+      </div>
+    `;
+
+    if (!members || members.length === 0) {
+      html += "<p>No members found.</p>";
+    }
+
+    for (const member of members || []) {
+      const role = member.role || "Member";
+      const color = rankColors[role] || "#cbd5e1";
+
+      html += `
+        <div class="card" style="padding:16px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+            <div>
+              <h3>👤 ${escapeHTML(member.username)}</h3>
+              <p class="muted" style="margin-top:6px">
+                Level ${escapeHTML(member.level ?? 1)}
+                · ${Number(member.coins || 0).toLocaleString()} coins
+              </p>
+            </div>
+
+            <strong style="color:${color}">
+              ${escapeHTML(role)}
+            </strong>
+          </div>
+
+          ${isAdmin() && !["Owner", "Admin"].includes(role) ? `
+            <div style="margin-top:15px">
+              <label>Change rank</label>
+
+              <select id="rank-${escapeHTML(member.id)}"
+                style="${inputStyle()}">
+                <option value="Member" ${role === "Member" ? "selected" : ""}>Member</option>
+                <option value="VIP" ${role === "VIP" ? "selected" : ""}>VIP</option>
+                <option value="Moderator" ${role === "Moderator" ? "selected" : ""}>Moderator</option>
+              </select>
+
+              <button class="primary-btn"
+                onclick="changeMemberRank('${member.id}')">
+                Save Rank
+              </button>
+            </div>
+          ` : ""}
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+
+  } catch (error) {
+    container.innerHTML = `
+      <div class="card" style="padding:20px">
+        <h3 style="color:#ff7777">Hierarchy Error</h3>
+        <p style="margin-top:10px">${escapeHTML(error.message)}</p>
+      </div>
+    `;
+  }
+}
+
+async function changeMemberRank(memberId) {
+  if (!isAdmin()) {
+    alert("Only admins can change ranks.");
+    return;
+  }
+
+  const select = document.getElementById("rank-" + memberId);
+  if (!select) return;
+
+  const newRole = select.value;
+
+  if (!["Member", "VIP", "Moderator"].includes(newRole)) {
+    alert("Invalid rank.");
+    return;
+  }
+
+  try {
+    const { error } = await supabaseClient
+      .from("profiles")
+      .update({ role: newRole })
+      .eq("id", memberId);
+
+    if (error) throw error;
+
+    alert("Member rank updated!");
+    await loadHierarchy();
+
+  } catch (error) {
+    alert("Could not update rank: " + error.message);
+  }
+}
+
+// LOGOUT AND STARTUP
 
 async function logout() {
   const { error } = await supabaseClient.auth.signOut();
@@ -599,6 +791,7 @@ async function logout() {
 async function startWebsite() {
   try {
     const { data, error } = await supabaseClient.auth.getSession();
+
     if (error) throw error;
 
     if (data.session) {
@@ -606,11 +799,14 @@ async function startWebsite() {
     } else {
       showAuth();
     }
+
   } catch (error) {
     app.innerHTML = `
       <div class="card" style="margin:30px;padding:25px">
         <h2>Ultimate Hub Error</h2>
-        <p style="color:#ff7777;margin-top:15px">${escapeHTML(error.message)}</p>
+        <p style="color:#ff7777;margin-top:15px">
+          ${escapeHTML(error.message)}
+        </p>
       </div>
     `;
   }
@@ -621,5 +817,6 @@ window.logout = logout;
 window.enterGiveaway = enterGiveaway;
 window.closeGiveaway = closeGiveaway;
 window.drawWinner = drawWinner;
+window.changeMemberRank = changeMemberRank;
 
 startWebsite();
