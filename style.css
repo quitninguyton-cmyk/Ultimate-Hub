@@ -3,12 +3,12 @@
 
 :root {
   --bg: #09090f;
-  --panel: #13131f;
-  --panel2: #1b1b2b;
+  --panel: #12121d;
+  --panel2: #191927;
   --purple: #8b5cf6;
   --blue: #38bdf8;
   --text: #ffffff;
-  --muted: #9999ad;
+  --muted: #9292a8;
 }
 
 * {
@@ -24,19 +24,6 @@ body {
   min-height: 100vh;
 }
 
-#app {
-  width: 100%;
-  min-height: 100vh;
-}
-
-h1 {
-  font-weight: 900;
-  letter-spacing: 2px;
-  background: linear-gradient(90deg, #a78bfa, #38bdf8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
 button {
   border: none;
   cursor: pointer;
@@ -45,24 +32,140 @@ button {
 }
 
 button:hover {
+  filter: brightness(1.2);
   transform: translateY(-2px);
 }
 
-input {
-  font-family: inherit;
+#app {
+  min-height: 100vh;
+}
+
+.topbar {
+  height: 75px;
+  padding: 0 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #10101a;
+  border-bottom: 1px solid #252538;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar h1 {
+  font-size: 23px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: linear-gradient(90deg, #a78bfa, #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.user-area {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: var(--muted);
+}
+
+.layout {
+  display: flex;
+  min-height: calc(100vh - 75px);
+}
+
+.sidebar {
+  width: 235px;
+  background: #10101a;
+  border-right: 1px solid #252538;
+  padding: 25px 15px;
+  flex-shrink: 0;
+}
+
+.sidebar h3 {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin: 5px 12px 18px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  margin-bottom: 6px;
+  background: transparent;
+  color: #aaaabe;
+  border-radius: 9px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.nav-item.active {
+  color: white;
+  background: linear-gradient(90deg, #713ce0, #4931a0);
+  box-shadow: 0 4px 20px #713ce033;
+}
+
+.main-content {
+  flex: 1;
+  padding: 35px;
+  min-width: 0;
+}
+
+.welcome {
+  margin-bottom: 30px;
+}
+
+.welcome h2 {
+  font-size: 32px;
+  margin: 8px 0;
+  font-weight: 800;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 25px;
 }
 
 .card {
-  background: var(--panel);
-  border: 1px solid #29293b;
+  background: linear-gradient(145deg, #171725, #11111b);
+  border: 1px solid #29293c;
   border-radius: 14px;
-  padding: 20px;
+  padding: 22px;
+}
+
+.stats-grid .card span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stats-grid .card h2 {
+  font-size: 30px;
+  margin-top: 12px;
+  font-weight: 800;
+}
+
+.content-card h2 {
+  font-size: 21px;
+  margin-bottom: 8px;
 }
 
 .primary-btn {
   background: linear-gradient(90deg, #8b5cf6, #6366f1);
   color: white;
-  padding: 12px 20px;
+  padding: 11px 17px;
   border-radius: 9px;
   font-weight: 700;
 }
@@ -70,13 +173,78 @@ input {
 .secondary-btn {
   background: var(--panel2);
   color: white;
-  padding: 12px 20px;
+  padding: 11px 17px;
   border: 1px solid #33334a;
   border-radius: 9px;
 }
 
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 600px) {
+  .topbar {
+    padding: 0 14px;
+    height: 65px;
+  }
+
+  .topbar h1 {
+    font-size: 17px;
+  }
+
+  .user-area {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .user-area .primary-btn {
+    padding: 9px;
+  }
+
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    display: flex;
+    overflow-x: auto;
+    padding: 10px;
+    border-right: none;
+    border-bottom: 1px solid #252538;
+    gap: 5px;
+  }
+
+  .sidebar h3 {
+    display: none;
+  }
+
+  .nav-item {
+    width: auto;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 11px;
+  }
+
+  .main-content {
+    padding: 20px 14px;
+  }
+
+  .welcome h2 {
+    font-size: 27px;
+  }
+
+  .stats-grid {
+    gap: 10px;
+  }
+
   .card {
-    padding: 15px;
+    padding: 16px;
+  }
+
+  .stats-grid .card h2 {
+    font-size: 24px;
   }
 }
