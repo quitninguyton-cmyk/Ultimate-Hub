@@ -1,6 +1,9 @@
 
+// ==========================================
 // ULTIMATE HUB - COMPLETE WEBSITE SCRIPT
-// Dashboard + Authentication + Giveaways + Hierarchy
+// Dashboard + Authentication + Giveaways
+// Hierarchy + Live Chat
+// ==========================================
 
 const SUPABASE_URL = "https://nvcsyigvsivtjbyjsbfb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_ZQQLO6j1kgf-ZoEZUtqahg_gWI4O4C4";
@@ -15,6 +18,8 @@ const app = document.getElementById("app");
 let currentUser = null;
 let currentProfile = null;
 let currentPage = "Dashboard";
+let chatChannel = null;
+let chatRefreshTimer = null;
 
 const pages = [
   ["Dashboard", "🏠"],
@@ -46,7 +51,9 @@ function isAdmin() {
   return currentProfile?.role === "Admin";
 }
 
+// ==========================================
 // AUTHENTICATION
+// ==========================================
 
 function showAuth(message = "") {
   app.innerHTML = `
@@ -56,14 +63,16 @@ function showAuth(message = "") {
         <p class="muted" style="text-align:center;margin:12px 0 25px">
           Your Community. Your Economy. Your Rewards.
         </p>
+
         <h2 id="auth-title">Welcome Back!</h2>
         <p class="muted" id="auth-description" style="margin:10px 0 20px">
           Login to your account.
         </p>
+
         <form id="auth-form">
           <label>Email</label>
-          <input id="email" type="email" required placeholder="Your email"
-            style="${inputStyle()}">
+          <input id="email" type="email" required
+            placeholder="Your email" style="${inputStyle()}">
 
           <label>Password</label>
           <input id="password" type="password" required minlength="6"
@@ -91,6 +100,7 @@ function showAuth(message = "") {
   `;
 
   let isRegister = false;
+
   const form = document.getElementById("auth-form");
   const usernameInput = document.getElementById("username");
 
@@ -169,7 +179,9 @@ function showAuth(message = "") {
   };
 }
 
+// ==========================================
 // DASHBOARD
+// ==========================================
 
 async function loadDashboard() {
   app.innerHTML = `
@@ -239,7 +251,6 @@ function render() {
     <div class="layout">
       <aside class="sidebar">
         <h3>MENU</h3>
-
         ${pages.map(([page, icon]) => `
           <button class="nav-item ${currentPage === page ? "active" : ""}"
             onclick="showPage('${page}')">
@@ -268,7 +279,7 @@ function render() {
 
           <div class="card">
             <span>⭐ Your Level</span>
-            <h2>${escapeHTML(currentProfile.level)}</h2>
+            <h2>${escapeHTML(currentProfile.level ?? 1)}</h2>
           </div>
 
           <div class="card">
@@ -309,7 +320,20 @@ function getDescription(page) {
   return descriptions[page] || "Welcome to Ultimate Hub!";
 }
 
+function stopChat() {
+  if (chatRefreshTimer) {
+    clearInterval(chatRefreshTimer);
+    chatRefreshTimer = null;
+  }
+
+  if (chatChannel) {
+    supabaseClient.removeChannel(chatChannel);
+    chatChannel = null;
+  }
+}
+
 function showPage(page) {
+  stopChat();
   currentPage = page;
   render();
 }
@@ -325,6 +349,11 @@ async function loadPageContent() {
 
   if (currentPage === "Hierarchy") {
     await loadHierarchy();
+    return;
+  }
+
+  if (currentPage === "Chat") {
+    await loadChat();
     return;
   }
 
@@ -352,7 +381,9 @@ async function loadPageContent() {
   `;
 }
 
+// ==========================================
 // GIVEAWAYS
+// ==========================================
 
 async function loadGiveaways() {
   const container = document.getElementById("page-content");
@@ -587,7 +618,6 @@ async function enterGiveaway(id) {
 
 async function closeGiveaway(id) {
   if (!isAdmin()) return;
-
   if (!confirm("Are you sure you want to close this giveaway?")) return;
 
   try {
@@ -608,7 +638,6 @@ async function closeGiveaway(id) {
 
 async function drawWinner(id) {
   if (!isAdmin()) return;
-
   if (!confirm("Pick a random winner from the entries?")) return;
 
   try {
@@ -644,7 +673,9 @@ async function drawWinner(id) {
   }
 }
 
+// ==========================================
 // HIERARCHY
+// ==========================================
 
 async function loadHierarchy() {
   const container = document.getElementById("page-content");
@@ -773,9 +804,182 @@ async function changeMemberRank(memberId) {
   }
 }
 
+// ==========================================
+// LIVE COMMUNITY CHAT
+// ==========================================
+
+async function loadChat() {
+  const container = document.getElementById("page-content");
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="padding:10px 0">
+      <h3>💬 Community Chat</h3>
+      <p class="muted" style="margin-top:8px">
+        Talk with other Ultimate Hub members!
+      </p>
+
+      <div id="chatMessages" style="
+        height:400px;
+        overflow-y:auto;
+        background:#151515;
+        border:1px solid #333;
+        border-radius:12px;
+        padding:12px;
+        margin:15px 0;
+      ">
+        Loading messages...
+      </div>
+
+      <form id="chatForm" style="display:flex;gap:8px;flex-wrap:wrap">
+        <input
+          id="chatInput"
+          type="text"
+          maxlength="1000"
+          placeholder="Write a message..."
+          required
+          style="flex:1;min-width:150px;padding:12px;border-radius:8px;"
+        >
+        <button class="primary-btn" type="submit">Send</button>
+      </form>
+
+      <p id="chatStatus" style="margin-top:10px"></p>
+    </div>
+  `;
+
+  await refreshChat();
+
+  const form = document.getElementById("chatForm");
+
+  form.onsubmit = async event => {
+    event.preventDefault();
+
+    const input = document.getElementById("chatInput");
+    const status = document.getElementById("chatStatus");
+    const message = input.value.trim();
+
+    if (!message) return;
+
+    if (!currentUser) {
+      status.textContent = "Please log in first.";
+      return;
+    }
+
+    status.textContent = "Sending...";
+
+    try {
+      const username =
+        currentProfile?.username ||
+        currentUser.user_metadata?.username ||
+        "Member";
+
+      const { error } = await supabaseClient
+        .from("chat_messages")
+        .insert({
+          user_id: currentUser.id,
+          username,
+          message
+        });
+
+      if (error) throw error;
+
+      input.value = "";
+      status.textContent = "";
+
+      await refreshChat();
+
+    } catch (error) {
+      status.textContent = "Could not send: " + error.message;
+    }
+  };
+
+  // Live updates when another member sends a message.
+  chatChannel = supabaseClient
+    .channel("ultimate-hub-chat")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "chat_messages"
+      },
+      () => {
+        if (currentPage === "Chat") refreshChat();
+      }
+    )
+    .subscribe();
+
+  // Backup refresh in case realtime is unavailable.
+  chatRefreshTimer = setInterval(() => {
+    if (
+      currentPage === "Chat" &&
+      document.getElementById("chatMessages")
+    ) {
+      refreshChat();
+    }
+  }, 10000);
+}
+
+async function refreshChat() {
+  const container = document.getElementById("chatMessages");
+  if (!container) return;
+
+  const { data, error } = await supabaseClient
+    .from("chat_messages")
+    .select("id, username, message, created_at")
+    .order("created_at", { ascending: true })
+    .limit(100);
+
+  if (error) {
+    container.textContent = "Chat error: " + error.message;
+    return;
+  }
+
+  const wasNearBottom =
+    container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+
+  if (!data || data.length === 0) {
+    container.textContent = "No messages yet. Start the conversation!";
+    return;
+  }
+
+  container.innerHTML = "";
+
+  data.forEach(msg => {
+    const item = document.createElement("div");
+
+    item.style.cssText =
+      "padding:10px;margin-bottom:8px;background:#222;border-radius:8px;overflow-wrap:anywhere;";
+
+    const name = document.createElement("strong");
+    name.textContent = msg.username || "Member";
+
+    const body = document.createElement("p");
+    body.textContent = msg.message;
+    body.style.margin = "5px 0";
+
+    const time = document.createElement("small");
+    time.style.color = "#aaa";
+    time.textContent = msg.created_at
+      ? new Date(msg.created_at).toLocaleString()
+      : "";
+
+    item.append(name, body, time);
+    container.appendChild(item);
+  });
+
+  if (wasNearBottom) {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+// ==========================================
 // LOGOUT AND STARTUP
+// ==========================================
 
 async function logout() {
+  stopChat();
+
   const { error } = await supabaseClient.auth.signOut();
 
   if (error) {
@@ -789,155 +993,6 @@ async function logout() {
 }
 
 async function startWebsite() {
-  // ===============================
-// ULTIMATE HUB LIVE CHAT
-// ===============================
-
-window.loadChat = async function () {
-    const app = document.getElementById("pageContent");
-
-    app.innerHTML = `
-        <div class="chat-container">
-            <h2>💬 Community Chat</h2>
-            <p>Talk with other Ultimate Hub members!</p>
-
-            <div id="chatMessages" style="
-                height:400px;
-                overflow-y:auto;
-                background:#151515;
-                border:1px solid #333;
-                border-radius:12px;
-                padding:12px;
-                margin:15px 0;
-            ">
-                Loading messages...
-            </div>
-
-            <form id="chatForm" style="display:flex;gap:8px;">
-                <input
-                    id="chatInput"
-                    type="text"
-                    maxlength="1000"
-                    placeholder="Write a message..."
-                    required
-                    style="flex:1;min-width:0;padding:12px;border-radius:8px;"
-                >
-                <button type="submit">Send</button>
-            </form>
-
-            <p id="chatStatus"></p>
-        </div>
-    `;
-
-    await window.refreshChat();
-
-    const form = document.getElementById("chatForm");
-
-    form.addEventListener("submit", async function (event) {
-        event.preventDefault();
-
-        const input = document.getElementById("chatInput");
-        const status = document.getElementById("chatStatus");
-        const message = input.value.trim();
-
-        if (!message) return;
-
-        const { data: { user } } =
-            await supabaseClient.auth.getUser();
-
-        if (!user) {
-            status.textContent = "Please log in first.";
-            return;
-        }
-
-        const { data: profile } = await supabaseClient
-            .from("profiles")
-            .select("username")
-            .eq("id", user.id)
-            .single();
-
-        const username =
-            profile?.username ||
-            user.user_metadata?.username ||
-            "Member";
-
-        status.textContent = "Sending...";
-
-        const { error } = await supabaseClient
-            .from("chat_messages")
-            .insert({
-                user_id: user.id,
-                username: username,
-                message: message
-            });
-
-        if (error) {
-            status.textContent = "Error: " + error.message;
-            return;
-        }
-
-        input.value = "";
-        status.textContent = "";
-        await window.refreshChat();
-    });
-};
-
-window.refreshChat = async function () {
-    const container = document.getElementById("chatMessages");
-    if (!container) return;
-
-    const { data, error } = await supabaseClient
-        .from("chat_messages")
-        .select("*")
-        .order("created_at", { ascending: true })
-        .limit(100);
-
-    if (error) {
-        container.textContent = "Chat error: " + error.message;
-        return;
-    }
-
-    if (!data || data.length === 0) {
-        container.textContent = "No messages yet. Start the conversation!";
-        return;
-    }
-
-    container.innerHTML = "";
-
-    data.forEach(function (msg) {
-        const item = document.createElement("div");
-        item.style.cssText =
-            "padding:10px;margin-bottom:8px;background:#222;border-radius:8px;";
-
-        const name = document.createElement("strong");
-        name.textContent = msg.username || "Member";
-
-        const body = document.createElement("p");
-        body.textContent = msg.message;
-        body.style.margin = "5px 0";
-
-        const time = document.createElement("small");
-        time.textContent = msg.created_at
-            ? new Date(msg.created_at).toLocaleString()
-            : "";
-
-        item.append(name, body, time);
-        container.appendChild(item);
-    });
-
-    container.scrollTop = container.scrollHeight;
-};
-
-// Refresh chat every 5 seconds while the chat page is open.
-if (window.chatRefreshTimer) {
-    clearInterval(window.chatRefreshTimer);
-}
-
-window.chatRefreshTimer = setInterval(function () {
-    if (document.getElementById("chatMessages")) {
-        window.refreshChat();
-    }
-}, 5000);
   try {
     const { data, error } = await supabaseClient.auth.getSession();
 
@@ -961,6 +1016,7 @@ window.chatRefreshTimer = setInterval(function () {
   }
 }
 
+// Make functions available to the website buttons.
 window.showPage = showPage;
 window.logout = logout;
 window.enterGiveaway = enterGiveaway;
