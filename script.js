@@ -1,11 +1,12 @@
 
-// ULTIMATE HUB - AUTHENTICATION
+// ===================================
+// ULTIMATE HUB - MAIN JAVASCRIPT
+// ===================================
 
 const SUPABASE_URL = "https://nvcsyigvsivtjbyjsbfb.supabase.co";
-
 const SUPABASE_KEY = "sb_publishable_ZQQLO6j1kgf-ZoEZUtqahg_gWI4O4C4";
 
-const supabase = window.supabase.createClient(
+const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
@@ -17,8 +18,21 @@ let currentProfile = null;
 let currentPage = "Dashboard";
 let authMessage = "";
 
+const pages = [
+  ["Dashboard", "🏠"],
+  ["Giveaways", "🎁"],
+  ["Hierarchy", "👑"],
+  ["Chat", "💬"],
+  ["Economy", "🪙"],
+  ["Shop", "🛒"],
+  ["Leaderboard", "🏆"],
+  ["Inventory", "🎒"],
+  ["Profile", "👤"]
+];
+
+// SECURITY: Escape displayed user content
 function escapeHTML(value) {
-  return String(value).replace(/[&<>"']/g, char => ({
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
@@ -27,21 +41,15 @@ function escapeHTML(value) {
   })[char]);
 }
 
-// AUTHENTICATION SCREEN
+// ===================================
+// LOGIN AND REGISTRATION
+// ===================================
+
 function showAuth() {
   app.innerHTML = `
-    <div style="
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
-    ">
-      <div class="card" style="
-        width:100%;
-        max-width:420px;
-        padding:30px;
-      ">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div class="card" style="width:100%;max-width:420px;padding:30px">
+
         <h1 style="text-align:center;font-size:28px">
           ULTIMATE HUB
         </h1>
@@ -52,36 +60,30 @@ function showAuth() {
 
         <h2 id="auth-title">Welcome Back!</h2>
 
-        <p id="auth-description" class="muted" style="margin:8px 0 20px">
+        <p class="muted" id="auth-description" style="margin:10px 0 20px">
           Login to your account.
         </p>
 
         <form id="auth-form">
+
           <label>Email</label>
           <input id="email" type="email" required
             placeholder="Your email"
-            style="width:100%;padding:13px;margin:8px 0 18px;
-            background:#191927;color:white;border:1px solid #33334a;
-            border-radius:8px">
+            style="width:100%;padding:13px;margin:8px 0 18px;background:#191927;color:white;border:1px solid #33334a;border-radius:8px">
 
           <label>Password</label>
-          <input id="password" type="password" required
-            minlength="6" placeholder="Your password"
-            style="width:100%;padding:13px;margin:8px 0 18px;
-            background:#191927;color:white;border:1px solid #33334a;
-            border-radius:8px">
+          <input id="password" type="password" required minlength="6"
+            placeholder="Your password"
+            style="width:100%;padding:13px;margin:8px 0 18px;background:#191927;color:white;border:1px solid #33334a;border-radius:8px">
 
-          <input id="username" type="text"
+          <input id="username" type="text" maxlength="20"
             placeholder="Choose a username"
-            maxlength="20"
-            style="display:none;width:100%;padding:13px;margin-bottom:18px;
-            background:#191927;color:white;border:1px solid #33334a;
-            border-radius:8px">
+            style="display:none;width:100%;padding:13px;margin-bottom:18px;background:#191927;color:white;border:1px solid #33334a;border-radius:8px">
 
-          <button class="primary-btn" type="submit"
-            id="auth-submit" style="width:100%">
+          <button class="primary-btn" id="auth-submit" type="submit" style="width:100%">
             Login
           </button>
+
         </form>
 
         <p id="auth-message" style="margin-top:15px;color:#a78bfa">
@@ -90,11 +92,12 @@ function showAuth() {
 
         <p style="margin-top:20px;text-align:center;font-size:13px">
           <span id="toggle-text">Don't have an account?</span>
-          <button id="toggle-auth"
+          <button id="toggle-auth" type="button"
             style="background:none;color:#a78bfa;font-weight:bold">
             Register
           </button>
         </p>
+
       </div>
     </div>
   `;
@@ -102,7 +105,7 @@ function showAuth() {
   let isRegister = false;
 
   const form = document.getElementById("auth-form");
-  const username = document.getElementById("username");
+  const usernameInput = document.getElementById("username");
 
   document.getElementById("toggle-auth").onclick = () => {
     isRegister = !isRegister;
@@ -122,8 +125,8 @@ function showAuth() {
     document.getElementById("toggle-auth").textContent =
       isRegister ? "Login" : "Register";
 
-    username.style.display = isRegister ? "block" : "none";
-    username.required = isRegister;
+    usernameInput.style.display = isRegister ? "block" : "none";
+    usernameInput.required = isRegister;
   };
 
   form.onsubmit = async event => {
@@ -131,24 +134,22 @@ function showAuth() {
 
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
-    const name = username.value.trim();
+    const username = usernameInput.value.trim();
 
     const message = document.getElementById("auth-message");
     const submit = document.getElementById("auth-submit");
 
-    if (isRegister && !/^[a-zA-Z0-9_]{3,20}$/.test(name)) {
-      message.textContent =
-        "Username must be 3-20 characters using letters, numbers or underscores.";
+    if (isRegister && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      message.textContent = "Username must be 3-20 characters. Use letters, numbers or underscores.";
       return;
     }
 
     submit.disabled = true;
     submit.textContent = "Please wait...";
-    message.textContent = "";
 
     try {
       if (isRegister) {
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await supabaseClient.auth.signUp({
           email,
           password
         });
@@ -156,15 +157,22 @@ function showAuth() {
         if (error) throw error;
 
         if (data.session) {
+          const { error: updateError } = await supabaseClient
+            .from("profiles")
+            .update({ username })
+            .eq("id", data.user.id);
+
+          if (updateError) throw updateError;
+
           await loadDashboard();
         } else {
-          message.textContent =
-            "Account created! Check your email to confirm your account, then log in.";
+          message.textContent = "Account created! Check your email to confirm, then log in. Your username will be set up during account onboarding.";
           submit.disabled = false;
           submit.textContent = "Create Account";
         }
+
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabaseClient.auth.signInWithPassword({
           email,
           password
         });
@@ -173,6 +181,7 @@ function showAuth() {
 
         await loadDashboard();
       }
+
     } catch (error) {
       message.textContent = error.message;
       submit.disabled = false;
@@ -181,53 +190,57 @@ function showAuth() {
   };
 }
 
-// DASHBOARD
-const pages = [
-  ["Dashboard", "🏠"],
-  ["Giveaways", "🎁"],
-  ["Hierarchy", "👑"],
-  ["Chat", "💬"],
-  ["Economy", "🪙"],
-  ["Shop", "🛒"],
-  ["Leaderboard", "🏆"],
-  ["Inventory", "🎒"],
-  ["Profile", "👤"]
-];
+// ===================================
+// LOAD MEMBER PROFILE
+// ===================================
 
 async function loadDashboard() {
-  const { data: { user }, error } =
-    await supabase.auth.getUser();
+  app.innerHTML = `
+    <div style="padding:40px;color:white">
+      <h1>ULTIMATE HUB</h1>
+      <p>Loading your account...</p>
+    </div>
+  `;
 
-  if (error || !user) {
-    currentUser = null;
-    currentProfile = null;
-    showAuth();
-    return;
-  }
+  try {
+    const { data, error } = await supabaseClient.auth.getUser();
 
-  currentUser = user;
+    if (error || !data.user) {
+      currentUser = null;
+      currentProfile = null;
+      showAuth();
+      return;
+    }
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
+    currentUser = data.user;
 
-  if (profileError || !profile) {
+    const { data: profile, error: profileError } =
+      await supabaseClient
+        .from("profiles")
+        .select("*")
+        .eq("id", currentUser.id)
+        .single();
+
+    if (profileError) throw profileError;
+
+    currentProfile = profile;
+    currentPage = "Dashboard";
+    render();
+
+  } catch (error) {
     app.innerHTML = `
       <div class="card" style="margin:30px">
-        <h2>Loading your profile...</h2>
-        <p class="muted">If this continues, contact an administrator.</p>
+        <h2>Profile Loading Error</h2>
+        <p style="color:#ff7777;margin:15px 0">${escapeHTML(error.message)}</p>
         <button class="secondary-btn" onclick="logout()">Logout</button>
       </div>
     `;
-    return;
   }
-
-  currentProfile = profile;
-  render();
 }
+
+// ===================================
+// DASHBOARD
+// ===================================
 
 function render() {
   if (!currentUser || !currentProfile) {
@@ -236,6 +249,7 @@ function render() {
   }
 
   const name = escapeHTML(currentProfile.username);
+  const coins = Number(currentProfile.coins).toLocaleString();
 
   app.innerHTML = `
     <header class="topbar">
@@ -243,13 +257,12 @@ function render() {
 
       <div class="user-area">
         <span>👤 ${name}</span>
-        <button class="primary-btn" onclick="logout()">
-          Logout
-        </button>
+        <button class="primary-btn" onclick="logout()">Logout</button>
       </div>
     </header>
 
     <div class="layout">
+
       <aside class="sidebar">
         <h3>MENU</h3>
 
@@ -262,6 +275,7 @@ function render() {
       </aside>
 
       <main class="main-content">
+
         <div class="welcome">
           <p class="muted">WELCOME TO ULTIMATE HUB</p>
           <h2>${escapeHTML(currentPage)}</h2>
@@ -269,6 +283,7 @@ function render() {
         </div>
 
         <div class="stats-grid">
+
           <div class="card">
             <span>👤 Member</span>
             <h2 style="font-size:20px">${name}</h2>
@@ -276,7 +291,7 @@ function render() {
 
           <div class="card">
             <span>🪙 Your Coins</span>
-            <h2>${Number(currentProfile.coins).toLocaleString()}</h2>
+            <h2>${coins}</h2>
           </div>
 
           <div class="card">
@@ -288,14 +303,15 @@ function render() {
             <span>👑 Your Rank</span>
             <h2 style="font-size:20px">${escapeHTML(currentProfile.role)}</h2>
           </div>
+
         </div>
 
         <section class="card content-card">
           <h2>${escapeHTML(currentPage)}</h2>
-          <p class="muted">
-            ${getDescription(currentPage)}
-          </p>
+          <p class="muted">${getDescription(currentPage)}</p>
+          <div id="page-content"></div>
         </section>
+
       </main>
     </div>
   `;
@@ -322,8 +338,12 @@ function showPage(page) {
   render();
 }
 
+// ===================================
+// LOGOUT
+// ===================================
+
 async function logout() {
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabaseClient.auth.signOut();
 
   if (error) {
     alert(error.message);
@@ -336,21 +356,32 @@ async function logout() {
   showAuth();
 }
 
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === "SIGNED_OUT") {
-    currentUser = null;
-    currentProfile = null;
-    showAuth();
-  }
-});
+// ===================================
+// START WEBSITE
+// ===================================
 
-showAuth();
+async function startWebsite() {
+  try {
+    const { data, error } = await supabaseClient.auth.getSession();
 
-supabase.auth.getSession().then(({ data, error }) => {
-  if (error) {
-    authMessage = error.message;
-    showAuth();
-  } else if (data.session) {
-    loadDashboard();
+    if (error) throw error;
+
+    if (data.session) {
+      await loadDashboard();
+    } else {
+      showAuth();
+    }
+
+  } catch (error) {
+    app.innerHTML = `
+      <div class="card" style="margin:30px">
+        <h2>Ultimate Hub Error</h2>
+        <p style="color:#ff7777;margin-top:15px">
+          ${escapeHTML(error.message)}
+        </p>
+      </div>
+    `;
   }
-});
+}
+
+startWebsite();
