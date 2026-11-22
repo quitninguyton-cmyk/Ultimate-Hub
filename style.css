@@ -1,0 +1,82 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --bg: #09090f;
+  --panel: #13131f;
+  --panel2: #1b1b2b;
+  --purple: #8b5cf6;
+  --blue: #38bdf8;
+  --text: #ffffff;
+  --muted: #9999ad;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+h1 {
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: linear-gradient(90deg, #a78bfa, #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+button {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: 0.2s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+input {
+  font-family: inherit;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid #29293b;
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.primary-btn {
+  background: linear-gradient(90deg, #8b5cf6, #6366f1);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 9px;
+  font-weight: 700;
+}
+
+.secondary-btn {
+  background: var(--panel2);
+  color: white;
+  padding: 12px 20px;
+  border: 1px solid #33334a;
+  border-radius: 9px;
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: 15px;
+  }
+}
