@@ -789,6 +789,155 @@ async function logout() {
 }
 
 async function startWebsite() {
+  // ===============================
+// ULTIMATE HUB LIVE CHAT
+// ===============================
+
+window.loadChat = async function () {
+    const app = document.getElementById("pageContent");
+
+    app.innerHTML = `
+        <div class="chat-container">
+            <h2>💬 Community Chat</h2>
+            <p>Talk with other Ultimate Hub members!</p>
+
+            <div id="chatMessages" style="
+                height:400px;
+                overflow-y:auto;
+                background:#151515;
+                border:1px solid #333;
+                border-radius:12px;
+                padding:12px;
+                margin:15px 0;
+            ">
+                Loading messages...
+            </div>
+
+            <form id="chatForm" style="display:flex;gap:8px;">
+                <input
+                    id="chatInput"
+                    type="text"
+                    maxlength="1000"
+                    placeholder="Write a message..."
+                    required
+                    style="flex:1;min-width:0;padding:12px;border-radius:8px;"
+                >
+                <button type="submit">Send</button>
+            </form>
+
+            <p id="chatStatus"></p>
+        </div>
+    `;
+
+    await window.refreshChat();
+
+    const form = document.getElementById("chatForm");
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const input = document.getElementById("chatInput");
+        const status = document.getElementById("chatStatus");
+        const message = input.value.trim();
+
+        if (!message) return;
+
+        const { data: { user } } =
+            await supabaseClient.auth.getUser();
+
+        if (!user) {
+            status.textContent = "Please log in first.";
+            return;
+        }
+
+        const { data: profile } = await supabaseClient
+            .from("profiles")
+            .select("username")
+            .eq("id", user.id)
+            .single();
+
+        const username =
+            profile?.username ||
+            user.user_metadata?.username ||
+            "Member";
+
+        status.textContent = "Sending...";
+
+        const { error } = await supabaseClient
+            .from("chat_messages")
+            .insert({
+                user_id: user.id,
+                username: username,
+                message: message
+            });
+
+        if (error) {
+            status.textContent = "Error: " + error.message;
+            return;
+        }
+
+        input.value = "";
+        status.textContent = "";
+        await window.refreshChat();
+    });
+};
+
+window.refreshChat = async function () {
+    const container = document.getElementById("chatMessages");
+    if (!container) return;
+
+    const { data, error } = await supabaseClient
+        .from("chat_messages")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(100);
+
+    if (error) {
+        container.textContent = "Chat error: " + error.message;
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        container.textContent = "No messages yet. Start the conversation!";
+        return;
+    }
+
+    container.innerHTML = "";
+
+    data.forEach(function (msg) {
+        const item = document.createElement("div");
+        item.style.cssText =
+            "padding:10px;margin-bottom:8px;background:#222;border-radius:8px;";
+
+        const name = document.createElement("strong");
+        name.textContent = msg.username || "Member";
+
+        const body = document.createElement("p");
+        body.textContent = msg.message;
+        body.style.margin = "5px 0";
+
+        const time = document.createElement("small");
+        time.textContent = msg.created_at
+            ? new Date(msg.created_at).toLocaleString()
+            : "";
+
+        item.append(name, body, time);
+        container.appendChild(item);
+    });
+
+    container.scrollTop = container.scrollHeight;
+};
+
+// Refresh chat every 5 seconds while the chat page is open.
+if (window.chatRefreshTimer) {
+    clearInterval(window.chatRefreshTimer);
+}
+
+window.chatRefreshTimer = setInterval(function () {
+    if (document.getElementById("chatMessages")) {
+        window.refreshChat();
+    }
+}, 5000);
   try {
     const { data, error } = await supabaseClient.auth.getSession();
 
